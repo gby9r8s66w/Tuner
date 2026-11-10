@@ -1,5 +1,5 @@
 /* Tuner — service worker: offline app shell, virtual manifest + icon */
-const VERSION = 'tuner-v1';
+const VERSION = 'tuner-v2';
 const SHELL = ['./'];
 
 const MANIFEST = {
@@ -9,8 +9,8 @@ const MANIFEST = {
   start_url: './',
   scope: './',
   display: 'standalone',
-  background_color: '#0d181f',
-  theme_color: '#0d181f',
+  background_color: '#ffffff',
+  theme_color: '#ffffff',
   icons: [
     { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
     { src: 'icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' }
@@ -41,7 +41,6 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Virtual PWA files
   if (url.pathname.endsWith('/manifest.webmanifest')) {
     e.respondWith(new Response(JSON.stringify(MANIFEST),
       { headers: { 'Content-Type': 'application/manifest+json' } }));
@@ -51,8 +50,6 @@ self.addEventListener('fetch', e => {
     e.respondWith(new Response(ICON, { headers: { 'Content-Type': 'image/svg+xml' } }));
     return;
   }
-
-  // App navigation: network-first, offline fallback to cached shell
   if (req.mode === 'navigate') {
     e.respondWith(
       fetch(req).then(r => {
@@ -63,8 +60,6 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-
-  // Same-origin assets: cache-first with revalidation
   if (url.origin === self.location.origin) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(r => {
       const cp = r.clone();
@@ -73,8 +68,6 @@ self.addEventListener('fetch', e => {
     })));
     return;
   }
-
-  // Web fonts: cached so the app keeps its typography offline
   if (/fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) {
     e.respondWith(caches.open(VERSION + '-fonts').then(c =>
       c.match(req).then(hit => hit || fetch(req).then(r => {
@@ -83,5 +76,6 @@ self.addEventListener('fetch', e => {
       }))));
     return;
   }
-  // Feed/audio requests fall through to the network (data lives in IndexedDB).
+  // Feed/audio/image requests fall through to the network;
+  // images and data are cached by the app itself in IndexedDB.
 });
